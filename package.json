@@ -11,7 +11,10 @@
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",
         "prepare": "husky install",
-        "start": "ts-node src/index.ts"
+        "start": "ts-node src/index.ts",
+        "prisma": "prisma",
+        "prisma:generate": "prisma generate",
+        "prisma:migrate": "prisma migrate"
     },
     "author": "Maulik Joshi <mb.dev08@gmail.com>",
     "license": "ISC",
@@ -39,11 +42,14 @@
         ]
     },
     "dependencies": {
+        "@prisma/client": "^6.19.1",
         "cors": "^2.8.5",
         "cross-env": "^7.0.3",
         "express": "^4.18.2",
         "express-validator": "^7.0.1",
         "http-errors": "^2.0.0",
+        "pg": "^8.16.3",
+        "prisma": "^6.19.1",
         "uuid": "^9.0.1",
         "winston": "^3.10.0"
     }

@@ -1,0 +1,19 @@
+// prisma/schema/user.prisma
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  firstName String?
+  lastName  String?
+  password  String
+  role      Role      @default(STUDENT)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("users")
+}
+
+
+enum Role {
+  STUDENT
+  SUPER_ADMIN
+}
