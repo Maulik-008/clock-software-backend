@@ -33,6 +33,13 @@ model User {
   participants      Participant[]
   messages          Message[]
   sessionLogs       SessionLog[]
+  
+  // Admin & Moderation Relations
+  presences                      UserPresence[]
+  moderationActionsTarget        ModerationAction[] @relation("ModerationTarget")
+  moderationActionsPerformed     ModerationAction[] @relation("ModerationPerformer")
+  moderationActionsRevoked       ModerationAction[] @relation("ModerationRevoker")
+  auditLogs                      AuditLog[]
 
   @@map("users")
 }

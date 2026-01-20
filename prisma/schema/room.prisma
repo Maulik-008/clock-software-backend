@@ -5,11 +5,19 @@ model Room {
   name              String        @unique
   capacity          Int           @default(50)
   currentOccupancy  Int           @default(0) @map("current_occupancy")
+  isLocked          Boolean       @default(false) @map("is_locked") // Admin can lock room
   createdAt         DateTime      @default(now()) @map("created_at")
   
   participants      Participant[]
   messages          Message[]
   sessionLogs       SessionLog[]  @relation("RoomSessionLogs")
+  
+  // Admin & Analytics Relations
+  analytics         RoomAnalytics[]
+  state             RoomState?
+  presences         UserPresence[]
+  capacityEvents    CapacityEvent[]
+  moderationActions ModerationAction[]
   
   @@index([name])
   @@map("rooms")

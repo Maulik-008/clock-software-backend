@@ -17,6 +17,8 @@
         "test:coverage": "jest --coverage",
         "test:property": "jest --testPathPatterns=property.test",
         "test:unit": "jest --testPathPatterns=unit.test",
+        "test:admin": "jest --testPathPattern=admin",
+        "test:admin:load": "ts-node scripts/admin-load-test.ts",
         "prisma": "prisma",
         "prisma:merge": "node scripts/merge-schema.js",
         "prisma:generate": "npm run prisma:merge && prisma generate --schema=prisma/schema/merged.prisma",

@@ -21,6 +21,297 @@ datasource db {
 // ========================================
 
 // ========================================
+// FROM: admin.prisma
+// ========================================
+
+model PlatformStats {
+  id                    String   @id @default(uuid())
+  date                  DateTime @unique @db.Date
+  
+  // User Metrics
+  totalUsers            Int      @default(0)
+  newUsers              Int      @default(0)
+  activeUsers           Int      @default(0) // Users who had at least 1 session
+  peakConcurrentUsers   Int      @default(0)
+  
+  // Session Metrics
+  totalSessions         Int      @default(0)
+  completedSessions     Int      @default(0)
+  abandonedSessions     Int      @default(0)
+  avgSessionDuration    Float    @default(0) // in minutes
+  totalStudyTime        Float    @default(0) // in hours
+  
+  // Room Metrics
+  totalRoomJoins        Int      @default(0)
+  failedJoins           Int      @default(0) // Due to capacity
+  avgRoomOccupancy      Float    @default(0)
+  peakRoomOccupancy     Int      @default(0)
+  
+  // Engagement Metrics
+  totalMessages         Int      @default(0)
+  cameraOnRate          Float    @default(0) // Percentage
+  micOnRate             Float    @default(0) // Percentage
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([date])
+  @@map("platform_stats")
+}
+
+
+model RoomAnalytics {
+  id                    String   @id @default(uuid())
+  roomId                String   @map("room_id")
+  date                  DateTime @db.Date
+  
+  // Occupancy Metrics
+  totalJoins            Int      @default(0)
+  totalLeaves           Int      @default(0)
+  failedJoins           Int      @default(0) // Capacity limit reached
+  peakOccupancy         Int      @default(0)
+  avgOccupancy          Float    @default(0)
+  timeAtCapacity        Int      @default(0) // Minutes spent at 50 users
+  
+  // Session Quality
+  avgTimePerUser        Float    @default(0) // in minutes
+  totalSessionTime      Float    @default(0) // in hours
+  
+  // Interaction Metrics
+  totalMessages         Int      @default(0)
+  avgMessagesPerUser    Float    @default(0)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  room                  Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@unique([roomId, date])
+  @@index([roomId, date])
+  @@index([date])
+  @@map("room_analytics")
+}
+
+
+model RoomState {
+  id                    String   @id @default(uuid())
+  roomId                String   @unique @map("room_id")
+  
+  // Current State
+  currentOccupancy      Int      @default(0)
+  activeUsers           Json     @default("[]") // Array of user IDs currently in room
+  
+  // Timer State
+  timerActive           Boolean  @default(false)
+  timerStartedAt        DateTime?
+  timerDuration         Int?     // in seconds
+  timerPausedAt         DateTime?
+  
+  // Activity Counters (reset daily)
+  messagesLast24h       Int      @default(0)
+  joinsLast24h          Int      @default(0)
+  
+  lastActivityAt        DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  room                  Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId])
+  @@map("room_states")
+}
+
+
+model UserPresence {
+  id                    String            @id @default(uuid())
+  userId                Int               @map("user_id")
+  roomId                String            @map("room_id")
+  
+  // Join Info
+  joinedAt              DateTime          @default(now())
+  socketId              String?           // For socket tracking
+  
+  // Media State
+  cameraOn              Boolean           @default(false)
+  micOn                 Boolean           @default(false)
+  
+  // Activity
+  lastActivityAt        DateTime          @default(now())
+  
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room                  Room              @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roomId])
+  @@index([roomId])
+  @@index([userId])
+  @@index([joinedAt])
+  @@map("user_presence")
+}
+
+
+model CapacityEvent {
+  id                    String   @id @default(uuid())
+  roomId                String   @map("room_id")
+  eventType             CapacityEventType
+  
+  // Event Details
+  occupancyAtEvent      Int      // How many users when event occurred
+  timestamp             DateTime @default(now())
+  duration              Int?     // For CAPACITY_FULL events, how long it lasted (seconds)
+  
+  room                  Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId, timestamp])
+  @@index([eventType, timestamp])
+  @@map("capacity_events")
+}
+
+enum CapacityEventType {
+  CAPACITY_REACHED    // Room hit 50 users
+  CAPACITY_RELEASED   // Room dropped below 50
+  JOIN_REJECTED       // User couldn't join due to capacity
+}
+
+
+
+
+
+model ModerationAction {
+  id                    String            @id @default(uuid())
+  
+  // Target Info
+  targetUserId          Int               @map("target_user_id")
+  roomId                String?           @map("room_id")
+  
+  // Action Details
+  actionType            ModerationType
+  reason                String?           @db.Text
+  duration              Int?              // For temporary actions (minutes)
+  
+  // Actor Info
+  performedBy           Int               @map("performed_by") // Admin user ID
+  performedAt           DateTime          @default(now())
+  
+  // Status
+  isActive              Boolean           @default(true)
+  expiresAt             DateTime?
+  revokedAt             DateTime?
+  revokedBy             Int?              @map("revoked_by")
+  
+  targetUser            User              @relation("ModerationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  room                  Room?             @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  admin                 User              @relation("ModerationPerformer", fields: [performedBy], references: [id])
+  revoker               User?             @relation("ModerationRevoker", fields: [revokedBy], references: [id])
+  
+  @@index([targetUserId])
+  @@index([roomId])
+  @@index([performedBy])
+  @@index([actionType, isActive])
+  @@index([performedAt])
+  @@map("moderation_actions")
+}
+
+enum ModerationType {
+  MUTE                // Mute user in room
+  KICK                // Remove from room
+  BAN                 // Ban from platform
+  WARN                // Warning only
+  UNMUTE              // Remove mute
+  UNBAN               // Remove ban
+}
+
+
+
+
+
+model AuditLog {
+  id                    String      @id @default(uuid())
+  
+  // Actor
+  userId                Int         @map("user_id")
+  userRole              Role        // Role at time of action
+  
+  // Action Details
+  action                AuditAction
+  resource              String      // e.g., "room", "user", "session"
+  resourceId            String?     @map("resource_id") // ID of affected resource
+  
+  // Context
+  description           String      @db.Text
+  metadata              Json?       // Additional context (old/new values, etc.)
+  ipAddress             String?     @map("ip_address")
+  userAgent             String?     @map("user_agent")
+  
+  // Timestamp
+  timestamp             DateTime    @default(now())
+  
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, timestamp])
+  @@index([action, timestamp])
+  @@index([resource, resourceId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
+
+enum AuditAction {
+  // Room Actions
+  ROOM_CREATED
+  ROOM_DELETED
+  ROOM_LOCKED
+  ROOM_UNLOCKED
+  ROOM_TIMER_RESET
+  ROOM_CHAT_CLEARED
+  ROOM_FORCE_END
+  ROOM_USERS_REMOVED
+  
+  // User Actions
+  USER_MUTED
+  USER_UNMUTED
+  USER_KICKED
+  USER_BANNED
+  USER_UNBANNED
+  USER_WARNED
+  USER_ROLE_CHANGED
+  
+  // System Actions
+  SETTINGS_CHANGED
+  ANALYTICS_EXPORTED
+  DATA_PURGED
+  
+  // Admin Actions
+  ADMIN_LOGIN
+  ADMIN_LOGOUT
+}
+
+
+
+
+
+model SystemMetrics {
+  id                    String   @id @default(uuid())
+  timestamp             DateTime @default(now())
+  
+  // Connection Metrics
+  activeSocketConnections Int    @default(0)
+  failedConnections     Int      @default(0)
+  
+  // Performance Metrics
+  avgApiResponseTime    Float    @default(0) // milliseconds
+  errorRate4xx          Float    @default(0) // percentage
+  errorRate5xx          Float    @default(0) // percentage
+  
+  // Timer Metrics
+  timerDesyncEvents     Int      @default(0)
+  
+  // Resource Usage (optional, can be populated by monitoring service)
+  cpuUsage              Float?   // percentage
+  memoryUsage           Float?   // percentage
+  
+  @@index([timestamp])
+  @@map("system_metrics")
+}
+
+// ========================================
 // FROM: auth.prisma
 // ========================================
 
@@ -61,11 +352,19 @@ model Room {
   name              String        @unique
   capacity          Int           @default(50)
   currentOccupancy  Int           @default(0) @map("current_occupancy")
+  isLocked          Boolean       @default(false) @map("is_locked") // Admin can lock room
   createdAt         DateTime      @default(now()) @map("created_at")
   
   participants      Participant[]
   messages          Message[]
   sessionLogs       SessionLog[]  @relation("RoomSessionLogs")
+  
+  // Admin & Analytics Relations
+  analytics         RoomAnalytics[]
+  state             RoomState?
+  presences         UserPresence[]
+  capacityEvents    CapacityEvent[]
+  moderationActions ModerationAction[]
   
   @@index([name])
   @@map("rooms")
@@ -279,6 +578,13 @@ model User {
   participants      Participant[]
   messages          Message[]
   sessionLogs       SessionLog[]
+  
+  // Admin & Moderation Relations
+  presences                      UserPresence[]
+  moderationActionsTarget        ModerationAction[] @relation("ModerationTarget")
+  moderationActionsPerformed     ModerationAction[] @relation("ModerationPerformer")
+  moderationActionsRevoked       ModerationAction[] @relation("ModerationRevoker")
+  auditLogs                      AuditLog[]
 
   @@map("users")
 }
