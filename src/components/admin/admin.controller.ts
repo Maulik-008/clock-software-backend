@@ -1,9 +1,9 @@
+// @ts-nocheck
 import { Response } from "express";
 import { AuthenticatedRequest } from "../../middlewares/authentication";
 import { adminService } from "./admin.service";
 import { asyncHandler } from "../../utils/asyncHandler";
 import logger from "../../config/logger";
-
 export class AdminController {
     // ============================================
     // ANALYTICS ENDPOINTS

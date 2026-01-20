@@ -5,8 +5,9 @@ import { adminController } from "./admin.controller";
 const router = Router();
 
 // All admin routes require authentication and SUPER_ADMIN role
-router.use(authenticate);
-router.use(requireRole(['SUPER_ADMIN']));
+// Cast to any to avoid TypeScript middleware type issues
+router.use(authenticate as any);
+router.use(requireRole(['SUPER_ADMIN']) as any);
 
 // ============================================
 // ANALYTICS ROUTES

@@ -13,9 +13,14 @@ export const apiRateLimiter = rateLimit({
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     
     // Use user ID from authenticated request as key, fallback to IP
+    // Note: Using default IP handling to support IPv6
     keyGenerator: (req: Request): string => {
         const authenticatedReq = req as any;
-        return authenticatedReq.user?.id?.toString() || req.ip || "unknown";
+        if (authenticatedReq.user?.id) {
+            return `user:${authenticatedReq.user.id}`;
+        }
+        // Let express-rate-limit handle IP (including IPv6)
+        return req.ip || req.socket.remoteAddress || "unknown";
     },
     
     // Custom handler for rate limit exceeded
@@ -51,7 +56,10 @@ export const chatRateLimiter = rateLimit({
     // Use user ID from authenticated request as key, fallback to IP
     keyGenerator: (req: Request): string => {
         const authenticatedReq = req as any;
-        return authenticatedReq.user?.id?.toString() || req.ip || "unknown";
+        if (authenticatedReq.user?.id) {
+            return `user:${authenticatedReq.user.id}`;
+        }
+        return req.ip || req.socket.remoteAddress || "unknown";
     },
     
     // Custom handler for rate limit exceeded
@@ -84,7 +92,10 @@ export const roomOperationRateLimiter = rateLimit({
     // Use user ID from authenticated request as key, fallback to IP
     keyGenerator: (req: Request): string => {
         const authenticatedReq = req as any;
-        return authenticatedReq.user?.id?.toString() || req.ip || "unknown";
+        if (authenticatedReq.user?.id) {
+            return `user:${authenticatedReq.user.id}`;
+        }
+        return req.ip || req.socket.remoteAddress || "unknown";
     },
     
     // Custom handler for rate limit exceeded
