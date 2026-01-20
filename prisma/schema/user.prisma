@@ -1,17 +1,41 @@
-// prisma/schema/user.prisma
+// User domain models and enums
+
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  firstName String?
-  lastName  String?
-  password  String
-  role      Role      @default(STUDENT)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  firstName         String?
+  lastName          String?
+  password          String?   // Optional for social login users
+  role              Role      @default(STUDENT)
+  isEmailVerified   Boolean   @default(false)
+  emailVerifyToken  String?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  googleId          String?   @unique
+  profilePicture    String?
+  lastLoginAt       DateTime?
+  
+  // User Preferences
+  timezone          String?   @default("UTC")
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Authentication Relations
+  refreshTokens     RefreshToken[]
+  sessions          UserSession[]
+  
+  // Study Relations
+  studySessions     StudySession[]
+  studyGoals        StudyGoal[]
+  
+  // Room Relations
+  participants      Participant[]
+  messages          Message[]
+  sessionLogs       SessionLog[]
 
   @@map("users")
 }
-
 
 enum Role {
   STUDENT

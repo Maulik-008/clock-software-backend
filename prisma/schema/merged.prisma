@@ -1,0 +1,290 @@
+// This is your main Prisma schema file
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+// ========================================
+// MERGED SCHEMA FILES
+// ========================================
+
+// ========================================
+// FROM: auth.prisma
+// ========================================
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  isRevoked Boolean  @default(false)
+  deviceInfo String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model UserSession {
+  id         String   @id @default(uuid())
+  userId     Int
+  deviceInfo String?
+  ipAddress  String?
+  userAgent  String?
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+// ========================================
+// FROM: room.prisma
+// ========================================
+
+model Room {
+  id                String        @id @default(uuid())
+  name              String        @unique
+  capacity          Int           @default(50)
+  currentOccupancy  Int           @default(0) @map("current_occupancy")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  
+  participants      Participant[]
+  messages          Message[]
+  sessionLogs       SessionLog[]  @relation("RoomSessionLogs")
+  
+  @@index([name])
+  @@map("rooms")
+}
+
+model Participant {
+  id        String            @id @default(uuid())
+  userId    Int               @map("user_id")
+  roomId    String            @map("room_id")
+  joinedAt  DateTime          @default(now()) @map("joined_at")
+  status    ParticipantStatus @default(ACTIVE)
+  
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room      Room              @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roomId])
+  @@index([roomId])
+  @@index([userId])
+  @@map("participants")
+}
+
+enum ParticipantStatus {
+  ACTIVE
+  MUTED
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  roomId    String      @map("room_id")
+  userId    Int         @map("user_id")
+  content   String      @db.Text
+  type      MessageType @default(TEXT)
+  timestamp DateTime    @default(now())
+  
+  room      Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId, timestamp])
+  @@index([userId])
+  @@map("messages")
+}
+
+enum MessageType {
+  TEXT
+  EMOJI
+  POLL
+}
+
+model SessionLog {
+  id        String   @id @default(uuid())
+  roomId    String   @map("room_id")
+  userId    Int      @map("user_id")
+  duration  Int      // in seconds
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  room      Room     @relation("RoomSessionLogs", fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("session_logs")
+}
+
+// ========================================
+// FROM: study.prisma
+// ========================================
+
+model StudySession {
+  id              String        @id @default(uuid())
+  userId          Int
+  
+  // Session Configuration
+  subject         String
+  topic           String?
+  sessionType     SessionType   @default(CUSTOM)
+  plannedDuration Int           // Planned duration in minutes
+  notes           String?
+  deviceId        String?
+  
+  // Time Tracking (All times in UTC)
+  startTime       DateTime
+  endTime         DateTime?
+  
+  // Pause/Resume Tracking
+  pausedAt        DateTime?
+  totalPausedTime Int           @default(0) // Total paused time in seconds
+  pauseCount      Int           @default(0) // Number of times paused
+  
+  // Session State
+  status          SessionStatus @default(ACTIVE)
+  
+  // Analytics & Performance
+  actualStudyTime Int?          // Actual focus time in minutes (excluding pauses)
+  productivityScore Float?      // Calculated score (actual vs planned)
+  
+  // Metadata
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pauseEvents     PauseEvent[]
+  
+  // Indexes for performance
+  @@index([userId, status])
+  @@index([userId, startTime])
+  @@index([startTime])
+  @@map("study_sessions")
+}
+
+model PauseEvent {
+  id              String       @id @default(uuid())
+  sessionId       String
+  pausedAt        DateTime
+  resumedAt       DateTime?
+  pauseDuration   Int?         // Duration in seconds
+  createdAt       DateTime     @default(now())
+  
+  session         StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+  @@map("pause_events")
+}
+
+model Subject {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  color       String?  // Hex color for UI
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("subjects")
+}
+
+model StudyGoal {
+  id              Int        @id @default(autoincrement())
+  userId          Int
+  title           String
+  description     String?
+  targetHours     Int        // Target hours per period
+  targetPeriod    GoalPeriod @default(WEEKLY)
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("study_goals")
+}
+
+
+enum SessionType {
+  POMODORO_25    // 25 minute Pomodoro
+  POMODORO_50    // 50 minute Pomodoro
+  CUSTOM         // Custom duration
+  DEEP_WORK      // Deep work session (90+ minutes)
+  REVIEW         // Review session
+}
+
+enum SessionStatus {
+  ACTIVE         // Currently running
+  PAUSED         // Temporarily paused
+  COMPLETED      // Successfully completed
+  ABANDONED      // Ended before completion
+  EXPIRED        // Auto-expired due to timeout
+}
+
+enum GoalPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+// ========================================
+// FROM: user.prisma
+// ========================================
+
+model User {
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  firstName         String?
+  lastName          String?
+  password          String?   // Optional for social login users
+  role              Role      @default(STUDENT)
+  isEmailVerified   Boolean   @default(false)
+  emailVerifyToken  String?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  googleId          String?   @unique
+  profilePicture    String?
+  lastLoginAt       DateTime?
+  
+  // User Preferences
+  timezone          String?   @default("UTC")
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Authentication Relations
+  refreshTokens     RefreshToken[]
+  sessions          UserSession[]
+  
+  // Study Relations
+  studySessions     StudySession[]
+  studyGoals        StudyGoal[]
+  
+  // Room Relations
+  participants      Participant[]
+  messages          Message[]
+  sessionLogs       SessionLog[]
+
+  @@map("users")
+}
+
+enum Role {
+  STUDENT
+  SUPER_ADMIN
+}
+

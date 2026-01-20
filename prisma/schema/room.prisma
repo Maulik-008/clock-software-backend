@@ -1,0 +1,75 @@
+// Shared Study Rooms domain models
+
+model Room {
+  id                String        @id @default(uuid())
+  name              String        @unique
+  capacity          Int           @default(50)
+  currentOccupancy  Int           @default(0) @map("current_occupancy")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  
+  participants      Participant[]
+  messages          Message[]
+  sessionLogs       SessionLog[]  @relation("RoomSessionLogs")
+  
+  @@index([name])
+  @@map("rooms")
+}
+
+model Participant {
+  id        String            @id @default(uuid())
+  userId    Int               @map("user_id")
+  roomId    String            @map("room_id")
+  joinedAt  DateTime          @default(now()) @map("joined_at")
+  status    ParticipantStatus @default(ACTIVE)
+  
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room      Room              @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roomId])
+  @@index([roomId])
+  @@index([userId])
+  @@map("participants")
+}
+
+enum ParticipantStatus {
+  ACTIVE
+  MUTED
+}
+
+model Message {
+  id        String      @id @default(uuid())
+  roomId    String      @map("room_id")
+  userId    Int         @map("user_id")
+  content   String      @db.Text
+  type      MessageType @default(TEXT)
+  timestamp DateTime    @default(now())
+  
+  room      Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId, timestamp])
+  @@index([userId])
+  @@map("messages")
+}
+
+enum MessageType {
+  TEXT
+  EMOJI
+  POLL
+}
+
+model SessionLog {
+  id        String   @id @default(uuid())
+  roomId    String   @map("room_id")
+  userId    Int      @map("user_id")
+  duration  Int      // in seconds
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  room      Room     @relation("RoomSessionLogs", fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("session_logs")
+}
