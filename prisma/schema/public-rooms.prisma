@@ -1,0 +1,78 @@
+// Public Study Rooms domain models
+
+model AnonymousUser {
+  id            String   @id @default(uuid())
+  hashedIp      String   @unique @map("hashed_ip")
+  displayName   String   @map("display_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+  lastActiveAt  DateTime @default(now()) @map("last_active_at")
+  
+  // Relations
+  roomParticipations RoomParticipant[]
+  chatMessages       ChatMessage[]
+  
+  @@index([hashedIp])
+  @@index([lastActiveAt])
+  @@map("anonymous_users")
+}
+
+model RoomParticipant {
+  id              String   @id @default(uuid())
+  roomId          String   @map("room_id")
+  anonymousUserId String   @map("anonymous_user_id")
+  joinedAt        DateTime @default(now()) @map("joined_at")
+  isVideoEnabled  Boolean  @default(false) @map("is_video_enabled")
+  isAudioEnabled  Boolean  @default(false) @map("is_audio_enabled")
+  
+  // Relations
+  room          Room          @relation("PublicRoomParticipants", fields: [roomId], references: [id], onDelete: Cascade)
+  anonymousUser AnonymousUser @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  
+  @@unique([roomId, anonymousUserId])
+  @@index([roomId])
+  @@index([anonymousUserId])
+  @@map("room_participants")
+}
+
+model ChatMessage {
+  id              String   @id @default(uuid())
+  roomId          String   @map("room_id")
+  anonymousUserId String   @map("anonymous_user_id")
+  content         String   @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  room          Room          @relation("PublicRoomChatMessages", fields: [roomId], references: [id], onDelete: Cascade)
+  anonymousUser AnonymousUser @relation(fields: [anonymousUserId], references: [id], onDelete: Cascade)
+  
+  @@index([roomId, createdAt])
+  @@index([anonymousUserId])
+  @@map("chat_messages")
+}
+
+model RateLimitRecord {
+  id          String   @id @default(uuid())
+  hashedIp    String   @map("hashed_ip")
+  action      String
+  attempts    Int      @default(1)
+  windowStart DateTime @default(now()) @map("window_start")
+  blockedUntil DateTime? @map("blocked_until")
+  
+  @@unique([hashedIp, action])
+  @@index([hashedIp])
+  @@index([blockedUntil])
+  @@map("rate_limit_records")
+}
+
+model SuspiciousActivityLog {
+  id           String   @id @default(uuid())
+  hashedIp     String   @map("hashed_ip")
+  activityType String   @map("activity_type")
+  details      String   @default("")
+  timestamp    DateTime @default(now())
+  
+  @@index([hashedIp])
+  @@index([timestamp])
+  @@index([activityType])
+  @@map("suspicious_activity_logs")
+}

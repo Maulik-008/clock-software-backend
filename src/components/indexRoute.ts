@@ -4,6 +4,7 @@ import authRouter from "./auth/auth.route";
 import studyRouter from "./study/study.route";
 import roomRouter from "./room/room.route";
 import adminRouter from "./admin/admin.routes";
+import publicRoomsRouter from "./public-rooms/public-rooms.route";
 
 const indexRouter = Router();
 
@@ -12,5 +13,6 @@ indexRouter.use("/user", userRouter);
 indexRouter.use("/sessions", studyRouter);
 indexRouter.use("/rooms", roomRouter);
 indexRouter.use("/admin", adminRouter);
+indexRouter.use("/public", publicRoomsRouter);
 
 export default indexRouter;

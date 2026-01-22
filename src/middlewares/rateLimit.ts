@@ -12,15 +12,15 @@ export const apiRateLimiter = rateLimit({
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     
-    // Use user ID from authenticated request as key, fallback to IP
-    // Note: Using default IP handling to support IPv6
+    // Use user ID from authenticated request as key
+    // Remove custom keyGenerator to use default IP handling (supports IPv6)
     keyGenerator: (req: Request): string => {
         const authenticatedReq = req as any;
         if (authenticatedReq.user?.id) {
             return `user:${authenticatedReq.user.id}`;
         }
-        // Let express-rate-limit handle IP (including IPv6)
-        return req.ip || req.socket.remoteAddress || "unknown";
+        // Return undefined to let express-rate-limit use default IP handling
+        return undefined as any;
     },
     
     // Custom handler for rate limit exceeded
@@ -53,13 +53,13 @@ export const chatRateLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     
-    // Use user ID from authenticated request as key, fallback to IP
+    // Use user ID from authenticated request as key
     keyGenerator: (req: Request): string => {
         const authenticatedReq = req as any;
         if (authenticatedReq.user?.id) {
             return `user:${authenticatedReq.user.id}`;
         }
-        return req.ip || req.socket.remoteAddress || "unknown";
+        return undefined as any;
     },
     
     // Custom handler for rate limit exceeded
@@ -89,13 +89,13 @@ export const roomOperationRateLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     
-    // Use user ID from authenticated request as key, fallback to IP
+    // Use user ID from authenticated request as key
     keyGenerator: (req: Request): string => {
         const authenticatedReq = req as any;
         if (authenticatedReq.user?.id) {
             return `user:${authenticatedReq.user.id}`;
         }
-        return req.ip || req.socket.remoteAddress || "unknown";
+        return undefined as any;
     },
     
     // Custom handler for rate limit exceeded

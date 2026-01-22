@@ -1,4 +1,3 @@
-import { Server as HttpServer } from 'http';
 import { Server as SocketIOServer, Socket, Namespace } from 'socket.io';
 import { JwtService } from '../../utils/jwt';
 import { RoomService } from './room.service';
@@ -78,20 +77,9 @@ export class RoomSocketServer {
     private roomService: RoomService;
     private roomNamespaces: Map<string, Namespace>;
 
-    constructor(httpServer: HttpServer) {
-        // Initialize Socket.io server with CORS configuration (Requirement 13.1)
-        this.io = new SocketIOServer(httpServer, {
-            cors: {
-                origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-                credentials: true,
-                methods: ['GET', 'POST'],
-            },
-            // Connection settings
-            pingTimeout: 60000,
-            pingInterval: 25000,
-            transports: ['websocket', 'polling'],
-        });
-
+    constructor(io: SocketIOServer) {
+        // Use existing Socket.io server instance
+        this.io = io;
         this.roomService = new RoomService();
         this.roomNamespaces = new Map();
 
@@ -999,12 +987,12 @@ let socketServerInstance: RoomSocketServer | null = null;
 /**
  * Initialize the Socket.io server
  * 
- * @param httpServer - HTTP server instance
+ * @param io - Socket.io server instance
  * @returns RoomSocketServer instance
  */
-export function initializeSocketServer(httpServer: HttpServer): RoomSocketServer {
+export function initializeSocketServer(io: SocketIOServer): RoomSocketServer {
     if (!socketServerInstance) {
-        socketServerInstance = new RoomSocketServer(httpServer);
+        socketServerInstance = new RoomSocketServer(io);
         socketServerInstance.initialize();
     }
     return socketServerInstance;

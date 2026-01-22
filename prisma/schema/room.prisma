@@ -19,6 +19,10 @@ model Room {
   capacityEvents    CapacityEvent[]
   moderationActions ModerationAction[]
   
+  // Public Study Rooms Relations
+  publicParticipants RoomParticipant[] @relation("PublicRoomParticipants")
+  chatMessages       ChatMessage[]     @relation("PublicRoomChatMessages")
+  
   @@index([name])
   @@map("rooms")
 }
